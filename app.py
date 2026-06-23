@@ -16,6 +16,8 @@ st.set_page_config(
     layout="wide"
 )
 
+st.markdown("""<style>.block-container{    padding-top:2rem;    padding-bottom:2rem;    max-width:1200px;}[data-testid="stSidebar"]{    min-width:280px;    max-width:280px;}@media (max-width:768px){    [data-testid="stSidebar"]{        min-width:100%;        max-width:100%;    }    .block-container{        padding-left:1rem;        padding-right:1rem;    }}</style>""", unsafe_allow_html=True)
+
 # ---------------------------------------------------
 # Header
 # ---------------------------------------------------
@@ -27,8 +29,6 @@ st.subheader(
 
 st.markdown("""
 Developed by **PixelPioneers**
-
-Survey of India × Cosmosoc GeoSnap Challenge
 
 Supported inputs:
 
@@ -52,20 +52,32 @@ with st.sidebar:
 PixelPioneers
 
 ### Models
-EfficientNet-B2 RGB
+**EfficientNet-B2 RGB**
+• Accuracy: 97.33%
 
-EfficientNet-B2 Multispectral
+**EfficientNet-B2 Multispectral**
+• Accuracy: 98.79%
 
-### Tasks
+[📓 View Google Colab Notebook](https://colab.research.google.com/)
 
-Task 1:
-Land Use Classification
+### Supported Formats
 
-Task 2:
-Model Explainability
+RGB Images
+• JPG
+• JPEG
+• PNG
+• BMP
+• WEBP
 
-Task 3:
-Environmental Analysis
+Multispectral Images
+• TIF
+• TIFF (13 Bands)
+
+### Features
+• Land Use Classification
+• Environmental Analysis
+• Probability Distribution
+• Downloadable Reports
 """)
 
 # ---------------------------------------------------
@@ -253,17 +265,22 @@ if uploaded:
             band_std
         ) = load_ms_model()
 
-        img = tiff.imread(
-            uploaded
-        ).astype(np.float32)
-
+        img = tiff.imread(uploaded).astype(np.float32)
+        if img.ndim != 3:
+            st.error(f"Expected a 3D TIFF, got shape {img.shape}")
+            st.stop()
+        if img.shape[0] == 13:
+            pass
+        elif img.shape[-1] == 13:
+            img = np.transpose(img, (2, 0, 1))
+        else:
+            st.error(f"Expected 13 bands, got shape {img.shape}")
+            st.stop()
+        band_mean = np.array(band_mean, dtype=np.float32)
+        band_std = np.array(band_std, dtype=np.float32)
         img = (
-            img
-            - np.array(band_mean)[:, None, None]
-        ) / (
-            np.array(band_std)[:, None, None]
-            + 1e-8
-        )
+            img - band_mean[:, None, None]) / (
+            band_std[:, None, None] + 1e-8)
 
         x = torch.tensor(
             img,
